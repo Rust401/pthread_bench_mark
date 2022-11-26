@@ -7,19 +7,17 @@
 
 pthread_t dudeA, dudeB;
 pthread_mutex_t speak_lock;
-pthread_mutex_t fuck_lock;
 pthread_cond_t speak;
-pthread_cond_t fuck;
 
-int dude_speaking = 1;
-int dude_fucking = 2;
+#define A_SPEAKING (1)
+#define B_SPEAKING (2)
+
+int dude_speaking = A_SPEAKING;
 
 static void inline init()
 {
 	pthread_mutex_init(&speak_lock, NULL);
-	pthread_mutex_init(&fuck_lock, NULL);
 	pthread_cond_init(&speak, NULL);
-	pthread_cond_init(&fuck, NULL);
 }
 
 void *dudeA_task()
@@ -27,45 +25,38 @@ void *dudeA_task()
 	while (1) {
 		pthread_mutex_lock(&speak_lock);
 
-		while (dude_speaking != 1)
+		/* wait B */
+		while (dude_speaking != A_SPEAKING)
 			pthread_cond_wait(&speak, &speak_lock);
 
+		/* A do sth */
+		dude_speaking = A_SPEAKING;
 		printf("A: speaking\n");
+		dude_speaking = B_SPEAKING;
+
+		/* signal B */
+		pthread_cond_signal(&speak);
 
 		pthread_mutex_unlock(&speak_lock);
-
-
-		pthread_mutex_lock(&fuck_lock);
-
-		dude_fucking = 1;
-		printf("A: fucking\n");
-		pthread_cond_signal(&fuck);
-		dude_fucking = 2;
-
-		pthread_mutex_unlock(&fuck_lock);
 	}
 }
 
 void *dudeB_task()
 {
 	while (1) {
-		pthread_mutex_lock(&fuck_lock);
-
-		while (dude_fucking != 2)
-			pthread_cond_wait(&fuck, &fuck_lock);
-
-		printf("B: fucking\n");
-
-		pthread_mutex_unlock(&fuck_lock);
-
-
 		pthread_mutex_lock(&speak_lock);
 
-		dude_speaking = 2;
-		printf("B: speaking\n");
-		pthread_cond_signal(&speak);
-		dude_speaking = 1;
+		/* wait A */
+		while (dude_speaking != B_SPEAKING)
+			pthread_cond_wait(&speak, &speak_lock);
 
+		/* B do sth */
+		dude_speaking = B_SPEAKING;
+		printf("B: speaking\n");
+		dude_speaking = A_SPEAKING;
+
+		/* signal A */
+		pthread_cond_signal(&speak);
 		pthread_mutex_unlock(&speak_lock);
 	}
 }
