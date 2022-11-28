@@ -3,11 +3,15 @@
 
 TARGET=main.c
 LEVEL=-O3
-COMPILER= clang-12
+COMPILER=clang-12
+COMPILER_ARM64=aarch64-linux-gnu-gcc
 
 all: $(TARGET)
 	$(COMPILER) -std=c11 -o test $(TARGET) $(LEVEL) -lpthread
 	time ./test
+
+arm64: $(TARGET)
+	$(COMPILER_ARM64) -std=c11 -o test_arm $(TARGET) $(LEVEL) --static -lpthread
 
 i:$(TARGET)
 	 $(COMPILER) -E $(TARGET) -o test.i $(LEVEL)
