@@ -7,107 +7,55 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-#define A_SPEAKING (1)
-#define B_SPEAKING (2)
+#define MAX_THREAD_NUM (10000)
 
-pthread_t dudeA, dudeB;
-pthread_mutex_t speak_lock;
-pthread_cond_t speak;
+pthread_t dudes[MAX_THREAD_NUM];
+
 struct timeval stop, start;
-
-int dude_speaking = A_SPEAKING;
-uint64_t wakecount = 0;
 
 static void inline init()
 {
-	pthread_mutex_init(&speak_lock, NULL);
-	pthread_cond_init(&speak, NULL);
 }
 
-static void inline gettime(struct timeval *start, struct timeval *stop)
+static void inline gettime(int i, struct timeval *start, struct timeval *stop)
 {
-	printf("count %lu, took %lu us\n", wakecount,
+	printf("count %d, took %lu us\n", i,
 	       (stop->tv_sec - start->tv_sec) * 1000000 + stop->tv_usec - start->tv_usec);
 }
 
-static void inline time_hook()
+static void inline time_hook(int i)
 {
-		if (wakecount == 0)
+		if (i == 0)
 			gettimeofday(&start, NULL);
 
-		if (wakecount % 1000 == 0) {
+		if (i % 100 == 0) {
 			gettimeofday(&stop, NULL);
-			gettime(&start, &stop);
+			gettime(i, &start, &stop);
 		}
 }
 
-void *dudeA_task()
+void *dude_task()
 {
+	printf("dude create\n");
 	while (1) {
-		pthread_mutex_lock(&speak_lock);
-
-		/* wait B */
-		while (dude_speaking != A_SPEAKING)
-			pthread_cond_wait(&speak, &speak_lock);
-
-		/* A do sth */
-		dude_speaking = A_SPEAKING;
-
-		time_hook();
-
-		++wakecount;
-		printf("A: speaking\n");
-		dude_speaking = B_SPEAKING;
-
-		/* signal B */
-		pthread_cond_signal(&speak);
-
-		pthread_mutex_unlock(&speak_lock);
-	}
-}
-
-void *dudeB_task()
-{
-	while (1) {
-		pthread_mutex_lock(&speak_lock);
-
-		/* wait A */
-		while (dude_speaking != B_SPEAKING)
-			pthread_cond_wait(&speak, &speak_lock);
-
-		/* B do sth */
-		dude_speaking = B_SPEAKING;
-
-		time_hook();
-
-		++wakecount;
-
-		/* wait A */
-		while (dude_speaking != B_SPEAKING)
-			pthread_cond_wait(&speak, &speak_lock);
-
-		/* B do sth */
-		dude_speaking = B_SPEAKING;
-		printf("B: speaking\n");
-		dude_speaking = A_SPEAKING;
-
-		/* signal A */
-		pthread_cond_signal(&speak);
-		pthread_mutex_unlock(&speak_lock);
 	}
 }
 
 int main()
 {
+	int i;
+	int thread_remain = MAX_THREAD_NUM;
+
 	init();
 
-	printf("inited\n");
+	for (i = 0; i < thread_remain; ++i) {
+		time_hook(i);
+		pthread_create(&dudes[i], NULL, dude_task, NULL);
+	}
 
-	pthread_create(&dudeA, NULL, dudeA_task, NULL);
-	pthread_create(&dudeB, NULL, dudeB_task, NULL);
 
-	pthread_join(dudeA, NULL);
-	pthread_join(dudeB, NULL);
+	for (i = 0; i < thread_remain; ++i)
+		pthread_join(dudes[i], NULL);
 
 	return 0;
 }
