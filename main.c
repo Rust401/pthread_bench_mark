@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-#define MAX_THREAD_NUM (10000)
+#define MAX_THREAD_NUM (6000)
 
 pthread_t dudes[MAX_THREAD_NUM];
 
@@ -37,8 +37,11 @@ static void inline time_hook(int i)
 void *dude_task()
 {
 	printf("dude create\n");
+	sleep(100);
+	/*
 	while (1) {
 	}
+	*/
 }
 
 int main()
