@@ -18,7 +18,6 @@ struct timeval stop, start;
 int dude_speaking = A_SPEAKING;
 uint64_t wakecount = 0;
 
-
 static void inline init()
 {
 	pthread_mutex_init(&speak_lock, NULL);
@@ -82,6 +81,13 @@ void *dudeB_task()
 		time_hook();
 
 		++wakecount;
+
+		/* wait A */
+		while (dude_speaking != B_SPEAKING)
+			pthread_cond_wait(&speak, &speak_lock);
+
+		/* B do sth */
+		dude_speaking = B_SPEAKING;
 		printf("B: speaking\n");
 		dude_speaking = A_SPEAKING;
 
